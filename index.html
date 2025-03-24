@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JWT</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .form-container {
+            margin-bottom: 20px;
+        }
+        .form-container input {
+            margin-right: 10px;
+        }
+        .message {
+            margin-top: 20px;
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>JWT</h1>
+
+    <div class="form-container">
+        <h2>Регистрация</h2>
+        <input type="text" id="registerUsername" placeholder="Логин">
+        <input type="password" id="registerPassword" placeholder="Пароль">
+        <button onclick="register()">Регистрация</button>
+    </div>
+
+    <div class="form-container">
+        <h2>Авторизация</h2>
+        <input type="text" id="loginUsername" placeholder="Логин">
+        <input type="password" id="loginPassword" placeholder="Пароль">
+        <button onclick="login()">Авторизация</button>
+    </div>
+
+    <div class="form-container">
+        <h2>Защищенные данные</h2>
+        <button onclick="fetchProtectedData()">Получить защищенные данные</button>
+    </div>
+
+    <div id="message" class="message"></div>
+    <div id="error" class="error"></div>
+
+    <script>
+        function validateInputs(username, password) {
+            if (!username || !password) {
+                showError('Поля не могут быть пустыми');
+                return false;
+            }
+            return true;
+        }
+
+        async function register() {
+            const username = document.getElementById('registerUsername').value;
+            const password = document.getElementById('registerPassword').value;
+
+            if (!validateInputs(username, password)) return;
+
+            const response = await fetch('http://localhost:3000/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                showMessage('Пользователь зарегистрирован');
+            } else {
+                showError(data.message);
+            }
+        }
+
+        async function login() {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+
+            if (!validateInputs(username, password)) return;
+
+            const response = await fetch('http://localhost:3000/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                localStorage.setItem('token', data.token);
+                showMessage('Пользователь был успешно авторизован');
+            } else {
+                showError(data.message);
+            }
+        }
+
+        async function fetchProtectedData() {
+            const token = localStorage.getItem('token');
+
+            if (!token) {
+                showError('Токен не найден');
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:3000/protected', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Доступ запрещен');
+                }
+
+                const data = await response.json();
+                showMessage(`Защищенные данные: ${JSON.stringify(data)}`);
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        function showMessage(message) {
+            document.getElementById('message').textContent = message;
+            document.getElementById('error').textContent = '';
+        }
+
+        function showError(error) {
+            document.getElementById('error').textContent = error;
+            document.getElementById('message').textContent = '';
+        }
+    </script>
+</body>
+</html>
